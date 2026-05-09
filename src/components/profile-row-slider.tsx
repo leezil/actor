@@ -72,7 +72,7 @@ export function ProfileRowSlider({ actors }: Props) {
           <Link
             key={actor.id}
             href={`/actors/${actor.id}`}
-            className="w-52 flex-shrink-0 overflow-hidden rounded-xl border border-zinc-200 bg-white"
+            className="w-52 flex-shrink-0 overflow-hidden rounded-xl border border-zinc-200 bg-white text-zinc-900"
             draggable={false}
             onDragStart={blockNativeDrag}
             onClick={(e) => {

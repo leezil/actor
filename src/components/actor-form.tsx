@@ -147,18 +147,18 @@ export function ActorForm({ initial, onSaved }: Props) {
   return (
     <form
       onSubmit={handleSubmit}
-      className="space-y-3 rounded-xl border border-zinc-200 bg-white p-4"
+      className="space-y-3 rounded-xl border border-zinc-200 bg-white p-4 text-zinc-900"
     >
       <h3 className="text-lg font-semibold">{title}</h3>
       <input
-        className="w-full rounded border p-2"
+        className="w-full rounded border border-zinc-300 bg-white p-2 text-zinc-900 placeholder:text-zinc-500"
         placeholder="이름"
         value={name}
         onChange={(e) => setName(e.target.value)}
         required
       />
       <input
-        className="w-full rounded border p-2"
+        className="w-full rounded border border-zinc-300 bg-white p-2 text-zinc-900 placeholder:text-zinc-500"
         placeholder="생년월일 (예: 1995-01-01)"
         value={birthDate}
         onChange={(e) => setBirthDate(e.target.value)}
@@ -166,7 +166,7 @@ export function ActorForm({ initial, onSaved }: Props) {
       />
       <div className="grid grid-cols-2 gap-3">
         <input
-          className="w-full rounded border p-2"
+          className="w-full rounded border border-zinc-300 bg-white p-2 text-zinc-900 placeholder:text-zinc-500"
           placeholder="키(cm)"
           type="number"
           value={heightCm}
@@ -174,7 +174,7 @@ export function ActorForm({ initial, onSaved }: Props) {
           required
         />
         <input
-          className="w-full rounded border p-2"
+          className="w-full rounded border border-zinc-300 bg-white p-2 text-zinc-900 placeholder:text-zinc-500"
           placeholder="몸무게(kg)"
           type="number"
           value={weightKg}
@@ -183,28 +183,28 @@ export function ActorForm({ initial, onSaved }: Props) {
         />
       </div>
       <textarea
-        className="w-full rounded border p-2"
+        className="w-full rounded border border-zinc-300 bg-white p-2 text-zinc-900 placeholder:text-zinc-500"
         placeholder="특기"
         value={specialties}
         onChange={(e) => setSpecialties(e.target.value)}
         required
       />
       <textarea
-        className="w-full rounded border p-2"
+        className="w-full rounded border border-zinc-300 bg-white p-2 text-zinc-900 placeholder:text-zinc-500"
         placeholder="취미"
         value={hobbies}
         onChange={(e) => setHobbies(e.target.value)}
         required
       />
       <textarea
-        className="w-full rounded border p-2"
+        className="w-full rounded border border-zinc-300 bg-white p-2 text-zinc-900 placeholder:text-zinc-500"
         placeholder="출연작품"
         value={filmography}
         onChange={(e) => setFilmography(e.target.value)}
         required
       />
       <input
-        className="w-full rounded border p-2"
+        className="w-full rounded border border-zinc-300 bg-white p-2 text-zinc-900 placeholder:text-zinc-500"
         placeholder="유튜브 링크"
         type="url"
         value={youtubeUrl}
@@ -235,6 +235,7 @@ export function ActorForm({ initial, onSaved }: Props) {
       </div>
 
       <input
+        className="block w-full text-sm text-zinc-700 file:mr-3 file:rounded file:border-0 file:bg-zinc-900 file:px-3 file:py-2 file:text-white"
         type="file"
         accept="image/*"
         onChange={(e) => setProfileFile(e.target.files?.[0] ?? null)}
@@ -266,6 +267,7 @@ export function ActorForm({ initial, onSaved }: Props) {
       </div>
 
       <input
+        className="block w-full text-sm text-zinc-700 file:mr-3 file:rounded file:border-0 file:bg-zinc-900 file:px-3 file:py-2 file:text-white"
         type="file"
         multiple
         accept="image/*"

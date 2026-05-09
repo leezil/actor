@@ -59,8 +59,8 @@ export default function AdminPage() {
 
       <ActorForm onSaved={loadActors} />
 
-      <section className="space-y-3 rounded-xl border border-zinc-200 bg-white p-4">
-        <h2 className="text-xl font-semibold">등록된 배우</h2>
+      <section className="space-y-3 rounded-xl border border-zinc-200 bg-white p-4 text-zinc-900">
+        <h2 className="text-xl font-semibold text-zinc-900">등록된 배우</h2>
         <div className="grid gap-2 sm:grid-cols-2 lg:grid-cols-3">
           {actors.map((actor) => (
             <div
