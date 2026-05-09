@@ -89,7 +89,7 @@ export function ActorForm({ initial, onSaved }: Props) {
     if (detailFiles.length > 0) {
       const uploaded = await uploadFiles(detailFiles);
       if (!uploaded) {
-        alert("상세 사진 업로드에 실패했습니다.");
+        alert("추가 사진 업로드에 실패했습니다.");
         setLoading(false);
         return;
       }
@@ -241,7 +241,7 @@ export function ActorForm({ initial, onSaved }: Props) {
       />
 
       <div className="space-y-2">
-        <label className="block text-sm font-medium">상세 추가 사진</label>
+        <label className="block text-sm font-medium">추가 사진</label>
         <div className="flex flex-wrap gap-2">
           {existingDetailPhotos.map((photo) => (
             <div key={photo} className="relative">
@@ -271,6 +271,9 @@ export function ActorForm({ initial, onSaved }: Props) {
         accept="image/*"
         onChange={(e) => setDetailFiles(Array.from(e.target.files ?? []))}
       />
+      <p className="text-xs text-zinc-500">
+        추가 사진은 여러 장을 한 번에 선택해서 업로드할 수 있습니다.
+      </p>
 
       <button
         type="submit"

@@ -25,10 +25,10 @@ export default async function Home() {
               <img
                 src={actor.profilePhoto}
                 alt={`${actor.name} 프로필`}
-                className="h-64 w-full object-cover"
+                className="aspect-[3/4] w-full object-cover"
               />
             ) : (
-              <div className="flex h-64 items-center justify-center bg-zinc-100 text-zinc-500">
+              <div className="flex aspect-[3/4] items-center justify-center bg-zinc-100 text-zinc-500">
                 이미지 없음
               </div>
             )}
