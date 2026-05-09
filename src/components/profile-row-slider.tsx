@@ -11,6 +11,7 @@ type Props = {
 export function ProfileRowSlider({ actors }: Props) {
   const scrollerRef = useRef<HTMLDivElement | null>(null);
   const movedRef = useRef(false);
+  const suppressClickRef = useRef(false);
   const [isDragging, setIsDragging] = useState(false);
   const [dragStartX, setDragStartX] = useState(0);
   const [dragStartScrollLeft, setDragStartScrollLeft] = useState(0);
@@ -36,7 +37,14 @@ export function ProfileRowSlider({ actors }: Props) {
   }
 
   function endDrag() {
+    if (movedRef.current) {
+      suppressClickRef.current = true;
+      setTimeout(() => {
+        suppressClickRef.current = false;
+      }, 80);
+    }
     setIsDragging(false);
+    movedRef.current = false;
   }
 
   function blockNativeDrag(e: React.DragEvent<HTMLElement>) {
@@ -68,7 +76,7 @@ export function ProfileRowSlider({ actors }: Props) {
             draggable={false}
             onDragStart={blockNativeDrag}
             onClick={(e) => {
-              if (movedRef.current) {
+              if (suppressClickRef.current) {
                 e.preventDefault();
               }
             }}
