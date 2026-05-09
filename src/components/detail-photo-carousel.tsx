@@ -44,7 +44,7 @@ export function DetailPhotoCarousel({ actorName, profilePhoto, photos }: Props) 
 
   return (
     <div className="space-y-3">
-      <div className="grid gap-3 lg:grid-cols-[minmax(220px,280px)_1fr]">
+      <div className="grid gap-3 lg:grid-cols-3">
         <div className="overflow-hidden rounded-xl bg-zinc-100">
           {profilePhoto ? (
             // eslint-disable-next-line @next/next/no-img-element
@@ -60,33 +60,24 @@ export function DetailPhotoCarousel({ actorName, profilePhoto, photos }: Props) 
           )}
         </div>
 
-        <div className="relative overflow-hidden rounded-xl bg-zinc-100">
+        <div className="relative overflow-hidden rounded-xl bg-zinc-100 lg:col-span-2">
           {photos.length > 0 ? (
             <>
-              <div
-                className="pointer-events-none absolute inset-y-0 left-0 z-10 w-8 bg-gradient-to-r from-zinc-100 to-transparent"
-                aria-hidden="true"
-              />
-              <div
-                className="pointer-events-none absolute inset-y-0 right-0 z-10 w-8 bg-gradient-to-l from-zinc-100 to-transparent"
-                aria-hidden="true"
-              />
-
               <div
                 className="flex cursor-grab gap-3 p-2 transition-transform duration-300 ease-out active:cursor-grabbing"
                 style={{
                   transform: `translateX(calc(-${index} * ((100% - 0.75rem) / 2 + 0.75rem)))`,
+                  touchAction: "pan-y",
                 }}
-                onTouchStart={(e) => handleDragStart(e.touches[0].clientX)}
-                onTouchEnd={(e) => handleDragEnd(e.changedTouches[0].clientX)}
-                onMouseDown={(e) => handleDragStart(e.clientX)}
-                onMouseUp={(e) => handleDragEnd(e.clientX)}
-                onMouseLeave={() => setDragStartX(null)}
+                onPointerDown={(e) => handleDragStart(e.clientX)}
+                onPointerUp={(e) => handleDragEnd(e.clientX)}
+                onPointerCancel={() => setDragStartX(null)}
+                onPointerLeave={() => setDragStartX(null)}
               >
                 {photos.map((photo) => (
                   <div
                     key={photo}
-                    className="w-[calc((100%-0.75rem)/2)] flex-shrink-0 overflow-hidden rounded-lg"
+                    className="w-[calc((100%-0.75rem)/2)] flex-shrink-0 overflow-hidden rounded-xl"
                   >
                     {/* eslint-disable-next-line @next/next/no-img-element */}
                     <img
@@ -97,28 +88,6 @@ export function DetailPhotoCarousel({ actorName, profilePhoto, photos }: Props) 
                   </div>
                 ))}
               </div>
-              {photos.length > visibleCount && (
-                <>
-                  <button
-                    type="button"
-                    onClick={prev}
-                    disabled={index === 0}
-                    className="absolute left-2 top-1/2 z-20 -translate-y-1/2 rounded-full bg-black/60 px-3 py-2 text-white disabled:opacity-30"
-                    aria-label="이전 사진"
-                  >
-                    ‹
-                  </button>
-                  <button
-                    type="button"
-                    onClick={next}
-                    disabled={index === maxStartIndex}
-                    className="absolute right-2 top-1/2 z-20 -translate-y-1/2 rounded-full bg-black/60 px-3 py-2 text-white disabled:opacity-30"
-                    aria-label="다음 사진"
-                  >
-                    ›
-                  </button>
-                </>
-              )}
             </>
           ) : (
             <div className="flex aspect-[3/4] items-center justify-center text-zinc-500">
