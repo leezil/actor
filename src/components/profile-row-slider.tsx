@@ -4,6 +4,8 @@ import Link from "next/link";
 import { useRef, useState } from "react";
 import { ActorProfile } from "@/types/actor";
 
+const DRAG_CLICK_THRESHOLD_PX = 12;
+
 type Props = {
   actors: ActorProfile[];
 };
@@ -11,48 +13,52 @@ type Props = {
 export function ProfileRowSlider({ actors }: Props) {
   const scrollerRef = useRef<HTMLDivElement | null>(null);
   const [isDragging, setIsDragging] = useState(false);
-  const [dragStartX, setDragStartX] = useState(0);
-  const [dragStartScrollLeft, setDragStartScrollLeft] = useState(0);
+  const dragConsumedRef = useRef(false);
+  const startXRef = useRef(0);
+  const scrollStartRef = useRef(0);
 
-  function startDrag(clientX: number) {
-    const scroller = scrollerRef.current;
-    if (!scroller) return;
+  function blockNativeDrag(ev: React.DragEvent<HTMLElement>) {
+    ev.preventDefault();
+  }
+
+  function onPointerDownCapture(e: React.PointerEvent<HTMLDivElement>) {
+    if (!scrollerRef.current?.contains(e.target as Node)) return;
+
+    dragConsumedRef.current = false;
+    startXRef.current = e.clientX;
+    scrollStartRef.current = scrollerRef.current.scrollLeft;
     setIsDragging(true);
-    setDragStartX(clientX);
-    setDragStartScrollLeft(scroller.scrollLeft);
-  }
 
-  function moveDrag(clientX: number) {
-    if (!isDragging) return;
-    const scroller = scrollerRef.current;
-    if (!scroller) return;
-    const delta = clientX - dragStartX;
-    scroller.scrollLeft = dragStartScrollLeft - delta;
-  }
+    function onMove(ev: PointerEvent) {
+      const scroller = scrollerRef.current;
+      if (!scroller) return;
+      const delta = ev.clientX - startXRef.current;
+      if (Math.abs(delta) > DRAG_CLICK_THRESHOLD_PX) {
+        dragConsumedRef.current = true;
+      }
+      scroller.scrollLeft = scrollStartRef.current - delta;
+    }
 
-  function endDrag() {
-    setIsDragging(false);
-  }
+    function onUp() {
+      window.removeEventListener("pointermove", onMove);
+      window.removeEventListener("pointerup", onUp);
+      window.removeEventListener("pointercancel", onUp);
+      setIsDragging(false);
+    }
 
-  function blockNativeDrag(e: React.DragEvent<HTMLElement>) {
-    e.preventDefault();
+    window.addEventListener("pointermove", onMove);
+    window.addEventListener("pointerup", onUp);
+    window.addEventListener("pointercancel", onUp);
   }
 
   return (
     <div
       ref={scrollerRef}
-      className={`overflow-x-auto [scrollbar-width:none] [&::-webkit-scrollbar]:hidden ${
+      className={`overflow-x-auto overscroll-x-contain [scrollbar-width:none] [&::-webkit-scrollbar]:hidden ${
         isDragging ? "cursor-grabbing select-none" : "cursor-grab"
       }`}
-      style={{ touchAction: "pan-y" }}
-      onPointerDown={(e) => {
-        e.currentTarget.setPointerCapture(e.pointerId);
-        startDrag(e.clientX);
-      }}
-      onPointerMove={(e) => moveDrag(e.clientX)}
-      onPointerUp={endDrag}
-      onPointerCancel={endDrag}
-      onPointerLeave={endDrag}
+      style={{ touchAction: "pan-x" }}
+      onPointerDownCapture={onPointerDownCapture}
     >
       <section className="grid min-w-max grid-flow-col grid-rows-2 auto-cols-[13rem] gap-4 pb-1">
         {actors.map((actor) => (
@@ -62,6 +68,12 @@ export function ProfileRowSlider({ actors }: Props) {
             className="w-full overflow-hidden rounded-xl border border-zinc-200 bg-white text-zinc-900"
             draggable={false}
             onDragStart={blockNativeDrag}
+            onClick={(ev) => {
+              if (dragConsumedRef.current) {
+                ev.preventDefault();
+                dragConsumedRef.current = false;
+              }
+            }}
           >
             {actor.profilePhoto ? (
               // eslint-disable-next-line @next/next/no-img-element
