@@ -28,23 +28,11 @@ export default async function ActorDetailPage({
 
       <section className="space-y-2">
         <h2 className="text-xl font-semibold">프로필 사진</h2>
-        {actor.profilePhoto ? (
-          // eslint-disable-next-line @next/next/no-img-element
-          <img
-            src={actor.profilePhoto}
-            alt={`${actor.name} 대표 사진`}
-            className="mx-auto h-[520px] w-full max-w-[390px] rounded-lg object-cover"
-          />
-        ) : (
-          <div className="rounded-lg border border-dashed border-zinc-300 p-8 text-center text-zinc-500">
-            등록된 대표 사진이 없습니다.
-          </div>
-        )}
-      </section>
-
-      <section className="space-y-2">
-        <h2 className="text-xl font-semibold">상세 사진</h2>
-        <DetailPhotoCarousel actorName={actor.name} photos={actor.detailPhotos} />
+        <DetailPhotoCarousel
+          actorName={actor.name}
+          profilePhoto={actor.profilePhoto}
+          photos={actor.detailPhotos}
+        />
       </section>
 
       <section className="rounded-xl border border-zinc-200 bg-white p-5">
