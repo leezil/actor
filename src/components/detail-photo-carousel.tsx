@@ -90,7 +90,7 @@ export function DetailPhotoCarousel({ actorName, profilePhoto, photos }: Props) 
   return (
     <div className="space-y-3">
       <div className="grid gap-3 lg:grid-cols-3">
-        <div className="overflow-hidden rounded-xl bg-zinc-100">
+        <div className="overflow-hidden rounded-xl bg-[var(--background)]">
           {profilePhoto ? (
             // eslint-disable-next-line @next/next/no-img-element
             <img
@@ -107,7 +107,7 @@ export function DetailPhotoCarousel({ actorName, profilePhoto, photos }: Props) 
           )}
         </div>
 
-        <div className="relative overflow-hidden rounded-xl bg-zinc-800 lg:col-span-2">
+        <div className="relative overflow-hidden rounded-xl bg-[var(--background)] lg:col-span-2">
           <div
             ref={scrollerRef}
             className={`overflow-x-auto [scrollbar-width:none] [&::-webkit-scrollbar]:hidden ${
@@ -130,7 +130,7 @@ export function DetailPhotoCarousel({ actorName, profilePhoto, photos }: Props) 
                   className="w-[calc((100%-0.75rem)/2)] min-w-[calc((100%-0.75rem)/2)] flex-shrink-0 overflow-hidden rounded-xl"
                 >
                   {photo.startsWith("__placeholder__") ? (
-                    <div className="flex aspect-[3/4] items-center justify-center bg-zinc-800 p-4 text-center text-zinc-400">
+                    <div className="flex aspect-[3/4] items-center justify-center bg-[var(--background)] p-4 text-center text-zinc-400">
                       등록된 추가 사진이 없습니다.
                     </div>
                   ) : (
