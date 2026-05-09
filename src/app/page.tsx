@@ -14,7 +14,9 @@ export default async function Home() {
           관리자 페이지
         </Link>
       </div>
-      <ProfileRowSlider actors={actors} />
+      <div className="mt-16">
+        <ProfileRowSlider actors={actors} />
+      </div>
     </main>
   );
 }

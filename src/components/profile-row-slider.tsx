@@ -10,6 +10,7 @@ type Props = {
 
 export function ProfileRowSlider({ actors }: Props) {
   const scrollerRef = useRef<HTMLDivElement | null>(null);
+  const movedRef = useRef(false);
   const [isDragging, setIsDragging] = useState(false);
   const [dragStartX, setDragStartX] = useState(0);
   const [dragStartScrollLeft, setDragStartScrollLeft] = useState(0);
@@ -17,6 +18,7 @@ export function ProfileRowSlider({ actors }: Props) {
   function startDrag(clientX: number) {
     const scroller = scrollerRef.current;
     if (!scroller) return;
+    movedRef.current = false;
     setIsDragging(true);
     setDragStartX(clientX);
     setDragStartScrollLeft(scroller.scrollLeft);
@@ -27,6 +29,9 @@ export function ProfileRowSlider({ actors }: Props) {
     const scroller = scrollerRef.current;
     if (!scroller) return;
     const delta = clientX - dragStartX;
+    if (Math.abs(delta) > 6) {
+      movedRef.current = true;
+    }
     scroller.scrollLeft = dragStartScrollLeft - delta;
   }
 
@@ -34,21 +39,25 @@ export function ProfileRowSlider({ actors }: Props) {
     setIsDragging(false);
   }
 
+  function blockNativeDrag(e: React.DragEvent<HTMLElement>) {
+    e.preventDefault();
+  }
+
   return (
     <div
       ref={scrollerRef}
       className={`overflow-x-auto [scrollbar-width:none] [&::-webkit-scrollbar]:hidden ${
-        isDragging ? "cursor-grabbing" : "cursor-grab"
+        isDragging ? "cursor-grabbing select-none" : "cursor-grab"
       }`}
       style={{ touchAction: "pan-y" }}
-      onMouseDown={(e) => startDrag(e.clientX)}
-      onMouseMove={(e) => moveDrag(e.clientX)}
-      onMouseUp={endDrag}
-      onMouseLeave={endDrag}
-      onTouchStart={(e) => startDrag(e.touches[0].clientX)}
-      onTouchMove={(e) => moveDrag(e.touches[0].clientX)}
-      onTouchEnd={endDrag}
-      onTouchCancel={endDrag}
+      onPointerDown={(e) => {
+        e.currentTarget.setPointerCapture(e.pointerId);
+        startDrag(e.clientX);
+      }}
+      onPointerMove={(e) => moveDrag(e.clientX)}
+      onPointerUp={endDrag}
+      onPointerCancel={endDrag}
+      onPointerLeave={endDrag}
     >
       <section className="flex min-w-max gap-4 pb-1">
         {actors.map((actor) => (
@@ -56,6 +65,13 @@ export function ProfileRowSlider({ actors }: Props) {
             key={actor.id}
             href={`/actors/${actor.id}`}
             className="w-52 flex-shrink-0 overflow-hidden rounded-xl border border-zinc-200 bg-white"
+            draggable={false}
+            onDragStart={blockNativeDrag}
+            onClick={(e) => {
+              if (movedRef.current) {
+                e.preventDefault();
+              }
+            }}
           >
             {actor.profilePhoto ? (
               // eslint-disable-next-line @next/next/no-img-element
@@ -64,6 +80,7 @@ export function ProfileRowSlider({ actors }: Props) {
                 alt={`${actor.name} 프로필`}
                 className="aspect-[3/4] w-full object-cover"
                 draggable={false}
+                onDragStart={blockNativeDrag}
               />
             ) : (
               <div className="flex aspect-[3/4] items-center justify-center bg-zinc-100 text-zinc-500">
