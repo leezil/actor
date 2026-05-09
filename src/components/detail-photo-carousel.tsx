@@ -11,14 +11,22 @@ type Props = {
 export function DetailPhotoCarousel({ actorName, profilePhoto, photos }: Props) {
   const [index, setIndex] = useState(0);
   const [dragStartX, setDragStartX] = useState<number | null>(null);
-  const lastIndex = useMemo(() => Math.max(photos.length - 1, 0), [photos.length]);
+  const visibleCount = 2;
+  const maxStartIndex = useMemo(
+    () => Math.max(photos.length - visibleCount, 0),
+    [photos.length]
+  );
+
+  function clampIndex(value: number) {
+    return Math.min(Math.max(value, 0), maxStartIndex);
+  }
 
   function prev() {
-    setIndex((current) => (current === 0 ? lastIndex : current - 1));
+    setIndex((current) => clampIndex(current - 1));
   }
 
   function next() {
-    setIndex((current) => (current === lastIndex ? 0 : current + 1));
+    setIndex((current) => clampIndex(current + 1));
   }
 
   function handleDragStart(clientX: number) {
@@ -36,7 +44,7 @@ export function DetailPhotoCarousel({ actorName, profilePhoto, photos }: Props) 
 
   return (
     <div className="space-y-3">
-      <div className="mx-auto grid max-w-3xl gap-3 lg:grid-cols-2">
+      <div className="grid gap-3 lg:grid-cols-[minmax(220px,280px)_1fr]">
         <div className="overflow-hidden rounded-xl bg-zinc-100">
           {profilePhoto ? (
             // eslint-disable-next-line @next/next/no-img-element
@@ -56,8 +64,19 @@ export function DetailPhotoCarousel({ actorName, profilePhoto, photos }: Props) 
           {photos.length > 0 ? (
             <>
               <div
-                className="flex cursor-grab transition-transform duration-300 ease-out active:cursor-grabbing"
-                style={{ transform: `translateX(-${index * 100}%)` }}
+                className="pointer-events-none absolute inset-y-0 left-0 z-10 w-8 bg-gradient-to-r from-zinc-100 to-transparent"
+                aria-hidden="true"
+              />
+              <div
+                className="pointer-events-none absolute inset-y-0 right-0 z-10 w-8 bg-gradient-to-l from-zinc-100 to-transparent"
+                aria-hidden="true"
+              />
+
+              <div
+                className="flex cursor-grab gap-3 p-2 transition-transform duration-300 ease-out active:cursor-grabbing"
+                style={{
+                  transform: `translateX(calc(-${index} * ((100% - 0.75rem) / 2 + 0.75rem)))`,
+                }}
                 onTouchStart={(e) => handleDragStart(e.touches[0].clientX)}
                 onTouchEnd={(e) => handleDragEnd(e.changedTouches[0].clientX)}
                 onMouseDown={(e) => handleDragStart(e.clientX)}
@@ -65,22 +84,26 @@ export function DetailPhotoCarousel({ actorName, profilePhoto, photos }: Props) 
                 onMouseLeave={() => setDragStartX(null)}
               >
                 {photos.map((photo) => (
-                  <div key={photo} className="w-full flex-shrink-0">
+                  <div
+                    key={photo}
+                    className="w-[calc((100%-0.75rem)/2)] flex-shrink-0 overflow-hidden rounded-lg"
+                  >
                     {/* eslint-disable-next-line @next/next/no-img-element */}
                     <img
                       src={photo}
-                      alt={`${actorName} 상세 사진`}
+                      alt={`${actorName} 추가 사진`}
                       className="aspect-[3/4] w-full object-cover"
                     />
                   </div>
                 ))}
               </div>
-              {photos.length > 1 && (
+              {photos.length > visibleCount && (
                 <>
                   <button
                     type="button"
                     onClick={prev}
-                    className="absolute left-2 top-1/2 -translate-y-1/2 rounded-full bg-black/60 px-3 py-2 text-white"
+                    disabled={index === 0}
+                    className="absolute left-2 top-1/2 z-20 -translate-y-1/2 rounded-full bg-black/60 px-3 py-2 text-white disabled:opacity-30"
                     aria-label="이전 사진"
                   >
                     ‹
@@ -88,7 +111,8 @@ export function DetailPhotoCarousel({ actorName, profilePhoto, photos }: Props) 
                   <button
                     type="button"
                     onClick={next}
-                    className="absolute right-2 top-1/2 -translate-y-1/2 rounded-full bg-black/60 px-3 py-2 text-white"
+                    disabled={index === maxStartIndex}
+                    className="absolute right-2 top-1/2 z-20 -translate-y-1/2 rounded-full bg-black/60 px-3 py-2 text-white disabled:opacity-30"
                     aria-label="다음 사진"
                   >
                     ›
@@ -104,11 +128,11 @@ export function DetailPhotoCarousel({ actorName, profilePhoto, photos }: Props) 
         </div>
       </div>
 
-      {photos.length > 1 && (
+      {photos.length > visibleCount && (
         <div className="flex items-center justify-center gap-2">
-          {photos.map((photo, dotIndex) => (
+          {Array.from({ length: maxStartIndex + 1 }).map((_, dotIndex) => (
             <button
-              key={photo}
+              key={`${dotIndex}-dot`}
               onClick={() => setIndex(dotIndex)}
               className={`h-2.5 w-2.5 rounded-full ${
                 dotIndex === index ? "bg-black" : "bg-zinc-300"
