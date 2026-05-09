@@ -35,22 +35,22 @@ export default async function ActorDetailPage({
         />
       </section>
 
-      <section className="rounded-xl border border-zinc-200 bg-white p-5">
-        <p>생년월일: {actor.birthDate}</p>
-        <p>
+      <section className="space-y-2 rounded-xl border border-zinc-200 bg-white p-5 text-zinc-900">
+        <p className="text-zinc-900">생년월일: {actor.birthDate}</p>
+        <p className="text-zinc-900">
           신체: {actor.heightCm}cm / {actor.weightKg}kg
         </p>
-        <p>특기: {actor.specialties}</p>
-        <p>취미: {actor.hobbies}</p>
-        <p>출연작품: {actor.filmography}</p>
+        <p className="text-zinc-900">특기: {actor.specialties}</p>
+        <p className="text-zinc-900">취미: {actor.hobbies}</p>
+        <p className="text-zinc-900">출연작품: {actor.filmography}</p>
         {actor.youtubeUrl && (
-          <p>
+          <p className="text-zinc-900">
             유튜브:{" "}
             <a
               href={actor.youtubeUrl}
               target="_blank"
               rel="noreferrer"
-              className="text-blue-600 underline"
+              className="font-medium text-blue-700 underline"
             >
               {actor.youtubeUrl}
             </a>
