@@ -91,7 +91,11 @@ export default function AdminPage() {
       </section>
 
       {selectedActor && (
-        <ActorForm initial={selectedActor} onSaved={loadActors} />
+        <ActorForm
+          key={`edit-${selectedActor.id}`}
+          initial={selectedActor}
+          onSaved={loadActors}
+        />
       )}
     </main>
   );
