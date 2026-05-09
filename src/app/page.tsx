@@ -8,11 +8,14 @@ export default async function Home() {
   const actors = await listActors();
   return (
     <main className="mx-auto w-full max-w-6xl px-6 pb-6 pt-14">
-      <div className="mb-6 flex items-center justify-between">
+      <div className="mb-6 flex items-start justify-between">
         <h1 className="text-3xl font-bold">배우 프로필</h1>
-        <Link href="/admin" className="rounded bg-black px-4 py-2 text-white">
-          관리자 페이지
-        </Link>
+        <div className="flex flex-col items-end gap-1">
+          <Link href="/admin" className="rounded bg-black px-4 py-2 text-white">
+            관리자 페이지
+          </Link>
+          <p className="text-sm text-zinc-400">옆으로 드래그 -&gt;</p>
+        </div>
       </div>
       <div className="mt-16">
         <ProfileRowSlider actors={actors} />
