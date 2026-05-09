@@ -1,6 +1,6 @@
 "use client";
 
-import { useMemo, useState } from "react";
+import { useMemo, useRef, useState } from "react";
 
 type Props = {
   actorName: string;
@@ -9,42 +9,35 @@ type Props = {
 };
 
 export function DetailPhotoCarousel({ actorName, profilePhoto, photos }: Props) {
-  const [index, setIndex] = useState(0);
-  const [dragStartX, setDragStartX] = useState<number | null>(null);
+  const scrollerRef = useRef<HTMLDivElement | null>(null);
+  const [isDragging, setIsDragging] = useState(false);
+  const [dragStartX, setDragStartX] = useState(0);
+  const [dragStartScrollLeft, setDragStartScrollLeft] = useState(0);
   const visibleCount = 2;
   const renderedPhotos = useMemo(() => {
     if (photos.length >= visibleCount) return photos;
     if (photos.length === 1) return [photos[0], "__placeholder__"];
     return ["__placeholder__", "__placeholder__2"];
   }, [photos]);
-  const maxStartIndex = useMemo(
-    () => Math.max(renderedPhotos.length - visibleCount, 0),
-    [renderedPhotos.length]
-  );
 
-  function clampIndex(value: number) {
-    return Math.min(Math.max(value, 0), maxStartIndex);
-  }
-
-  function prev() {
-    setIndex((current) => clampIndex(current - 1));
-  }
-
-  function next() {
-    setIndex((current) => clampIndex(current + 1));
-  }
-
-  function handleDragStart(clientX: number) {
+  function handlePointerDown(clientX: number) {
+    const scroller = scrollerRef.current;
+    if (!scroller) return;
+    setIsDragging(true);
     setDragStartX(clientX);
+    setDragStartScrollLeft(scroller.scrollLeft);
   }
 
-  function handleDragEnd(clientX: number) {
-    if (dragStartX === null) return;
+  function handlePointerMove(clientX: number) {
+    if (!isDragging) return;
+    const scroller = scrollerRef.current;
+    if (!scroller) return;
     const delta = clientX - dragStartX;
-    setDragStartX(null);
-    if (Math.abs(delta) < 40) return;
-    if (delta < 0) next();
-    if (delta > 0) prev();
+    scroller.scrollLeft = dragStartScrollLeft - delta;
+  }
+
+  function handlePointerUp() {
+    setIsDragging(false);
   }
 
   function blockNativeDrag(e: React.DragEvent<HTMLImageElement>) {
@@ -73,59 +66,46 @@ export function DetailPhotoCarousel({ actorName, profilePhoto, photos }: Props) 
 
         <div className="relative overflow-hidden rounded-xl bg-zinc-100 lg:col-span-2">
           <div
-            className="flex cursor-grab gap-3 p-2 transition-transform duration-300 ease-out active:cursor-grabbing"
-            style={{
-              transform: `translateX(calc(-${index} * ((100% - 0.75rem) / 2 + 0.75rem)))`,
-              touchAction: "pan-y",
-            }}
-            onPointerDown={(e) => {
-              if (photos.length <= visibleCount) return;
-              e.currentTarget.setPointerCapture(e.pointerId);
-              handleDragStart(e.clientX);
-            }}
-            onPointerUp={(e) => handleDragEnd(e.clientX)}
-            onPointerCancel={() => setDragStartX(null)}
-            onPointerLeave={() => setDragStartX(null)}
+            ref={scrollerRef}
+            className={`overflow-x-auto [scrollbar-width:none] [&::-webkit-scrollbar]:hidden ${
+              isDragging ? "cursor-grabbing" : "cursor-grab"
+            }`}
+            style={{ touchAction: "pan-y" }}
+            onMouseDown={(e) => handlePointerDown(e.clientX)}
+            onMouseMove={(e) => handlePointerMove(e.clientX)}
+            onMouseUp={handlePointerUp}
+            onMouseLeave={handlePointerUp}
+            onTouchStart={(e) => handlePointerDown(e.touches[0].clientX)}
+            onTouchMove={(e) => handlePointerMove(e.touches[0].clientX)}
+            onTouchEnd={handlePointerUp}
+            onTouchCancel={handlePointerUp}
           >
-            {renderedPhotos.map((photo, photoIndex) => (
-              <div
-                key={`${photo}-${photoIndex}`}
-                className="w-[calc((100%-0.75rem)/2)] flex-shrink-0 overflow-hidden rounded-xl"
-              >
-                {photo.startsWith("__placeholder__") ? (
-                  <div className="flex aspect-[3/4] items-center justify-center bg-zinc-100 p-4 text-center text-zinc-500">
-                    등록된 추가 사진이 없습니다.
-                  </div>
-                ) : (
-                  // eslint-disable-next-line @next/next/no-img-element
-                  <img
-                    src={photo}
-                    alt={`${actorName} 추가 사진`}
-                    className="aspect-[3/4] w-full object-cover"
-                    draggable={false}
-                    onDragStart={blockNativeDrag}
-                  />
-                )}
-              </div>
-            ))}
+            <div className="flex gap-3 p-2">
+              {renderedPhotos.map((photo, photoIndex) => (
+                <div
+                  key={`${photo}-${photoIndex}`}
+                  className="w-[calc((100%-0.75rem)/2)] min-w-[calc((100%-0.75rem)/2)] flex-shrink-0 overflow-hidden rounded-xl"
+                >
+                  {photo.startsWith("__placeholder__") ? (
+                    <div className="flex aspect-[3/4] items-center justify-center bg-zinc-100 p-4 text-center text-zinc-500">
+                      등록된 추가 사진이 없습니다.
+                    </div>
+                  ) : (
+                    // eslint-disable-next-line @next/next/no-img-element
+                    <img
+                      src={photo}
+                      alt={`${actorName} 추가 사진`}
+                      className="aspect-[3/4] w-full object-cover"
+                      draggable={false}
+                      onDragStart={blockNativeDrag}
+                    />
+                  )}
+                </div>
+              ))}
+            </div>
           </div>
         </div>
       </div>
-
-      {photos.length > visibleCount && (
-        <div className="flex items-center justify-center gap-2">
-          {Array.from({ length: maxStartIndex + 1 }).map((_, dotIndex) => (
-            <button
-              key={`${dotIndex}-dot`}
-              onClick={() => setIndex(dotIndex)}
-              className={`h-2.5 w-2.5 rounded-full ${
-                dotIndex === index ? "bg-black" : "bg-zinc-300"
-              }`}
-              aria-label={`${dotIndex + 1}번 사진 보기`}
-            />
-          ))}
-        </div>
-      )}
     </div>
   );
 }
