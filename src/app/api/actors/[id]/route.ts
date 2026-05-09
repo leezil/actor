@@ -27,8 +27,8 @@ export async function PUT(
 ) {
   const { id } = await params;
   const body = await req.json();
-  const existingPhotos = Array.isArray(body.existingPhotos)
-    ? (body.existingPhotos as string[])
+  const existingDetailPhotos = Array.isArray(body.existingDetailPhotos)
+    ? (body.existingDetailPhotos as string[])
     : [];
 
   const actor = await upsertActor({
@@ -41,9 +41,15 @@ export async function PUT(
     hobbies: String(body.hobbies ?? ""),
     filmography: String(body.filmography ?? ""),
     youtubeUrl: String(body.youtubeUrl ?? ""),
-    existingPhotos,
-    newPhotoKeys: Array.isArray(body.newPhotoKeys)
-      ? (body.newPhotoKeys as string[])
+    existingProfilePhoto: body.existingProfilePhoto
+      ? String(body.existingProfilePhoto)
+      : "",
+    existingDetailPhotos,
+    newProfilePhotoKey: body.newProfilePhotoKey
+      ? String(body.newProfilePhotoKey)
+      : undefined,
+    newDetailPhotoKeys: Array.isArray(body.newDetailPhotoKeys)
+      ? (body.newDetailPhotoKeys as string[])
       : [],
   });
 

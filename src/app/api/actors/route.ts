@@ -27,8 +27,11 @@ export async function POST(req: Request) {
     hobbies: String(body.hobbies ?? ""),
     filmography: String(body.filmography ?? ""),
     youtubeUrl: String(body.youtubeUrl ?? ""),
-    newPhotoKeys: Array.isArray(body.newPhotoKeys)
-      ? (body.newPhotoKeys as string[])
+    newProfilePhotoKey: body.newProfilePhotoKey
+      ? String(body.newProfilePhotoKey)
+      : undefined,
+    newDetailPhotoKeys: Array.isArray(body.newDetailPhotoKeys)
+      ? (body.newDetailPhotoKeys as string[])
       : [],
   });
 

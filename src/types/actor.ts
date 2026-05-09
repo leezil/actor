@@ -8,8 +8,10 @@ export type ActorProfile = {
   hobbies: string;
   filmography: string;
   youtubeUrl?: string;
-  photoKeys: string[];
-  photos: string[];
+  profilePhotoKey: string;
+  profilePhoto: string;
+  detailPhotoKeys: string[];
+  detailPhotos: string[];
   createdAt: string;
   updatedAt: string;
 };

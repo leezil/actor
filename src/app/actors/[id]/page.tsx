@@ -25,17 +25,41 @@ export default async function ActorDetailPage({
         </Link>
       </div>
 
-      <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-3">
-        {actor.photos.map((photo) => (
+      <section className="space-y-2">
+        <h2 className="text-xl font-semibold">프로필 사진</h2>
+        {actor.profilePhoto ? (
           // eslint-disable-next-line @next/next/no-img-element
           <img
-            key={photo}
-            src={photo}
-            alt={`${actor.name} 사진`}
-            className="h-72 w-full rounded-lg object-cover"
+            src={actor.profilePhoto}
+            alt={`${actor.name} 대표 사진`}
+            className="h-96 w-full rounded-lg object-cover"
           />
-        ))}
-      </div>
+        ) : (
+          <div className="rounded-lg border border-dashed border-zinc-300 p-8 text-center text-zinc-500">
+            등록된 대표 사진이 없습니다.
+          </div>
+        )}
+      </section>
+
+      <section className="space-y-2">
+        <h2 className="text-xl font-semibold">상세 사진</h2>
+        <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-3">
+          {actor.detailPhotos.map((photo) => (
+            // eslint-disable-next-line @next/next/no-img-element
+            <img
+              key={photo}
+              src={photo}
+              alt={`${actor.name} 상세 사진`}
+              className="h-72 w-full rounded-lg object-cover"
+            />
+          ))}
+          {actor.detailPhotos.length === 0 && (
+            <div className="rounded-lg border border-dashed border-zinc-300 p-6 text-center text-zinc-500">
+              등록된 상세 사진이 없습니다.
+            </div>
+          )}
+        </div>
+      </section>
 
       <section className="rounded-xl border border-zinc-200 bg-white p-5">
         <p>생년월일: {actor.birthDate}</p>

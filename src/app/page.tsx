@@ -20,10 +20,10 @@ export default async function Home() {
             href={`/actors/${actor.id}`}
             className="overflow-hidden rounded-xl border border-zinc-200 bg-white"
           >
-            {actor.photos[0] ? (
+            {actor.profilePhoto ? (
               // eslint-disable-next-line @next/next/no-img-element
               <img
-                src={actor.photos[0]}
+                src={actor.profilePhoto}
                 alt={`${actor.name} 프로필`}
                 className="h-64 w-full object-cover"
               />

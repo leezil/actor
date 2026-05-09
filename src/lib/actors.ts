@@ -51,11 +51,19 @@ export async function getActorById(id: string) {
 
 type UpsertActorInput = Omit<
   ActorProfile,
-  "id" | "photoKeys" | "photos" | "createdAt" | "updatedAt"
+  | "id"
+  | "profilePhotoKey"
+  | "profilePhoto"
+  | "detailPhotoKeys"
+  | "detailPhotos"
+  | "createdAt"
+  | "updatedAt"
 > & {
   id?: string;
-  existingPhotos?: string[];
-  newPhotoKeys?: string[];
+  existingProfilePhoto?: string;
+  existingDetailPhotos?: string[];
+  newProfilePhotoKey?: string;
+  newDetailPhotoKeys?: string[];
 };
 
 export async function upsertActor(input: UpsertActorInput) {
@@ -64,13 +72,19 @@ export async function upsertActor(input: UpsertActorInput) {
   const prev = input.id ? await getActorById(input.id) : null;
 
   const base = process.env.CLOUDFLARE_R2_PUBLIC_BASE_URL?.replace(/\/$/, "");
-  const existingPhotoKeys = (input.existingPhotos ?? []).map((urlOrKey) => {
-    if (base && urlOrKey.startsWith(base)) {
-      return urlOrKey.replace(`${base}/`, "");
-    }
-    return urlOrKey;
-  });
-  const photoKeys = [...existingPhotoKeys, ...(input.newPhotoKeys ?? [])];
+  const existingProfilePhotoKey = input.existingProfilePhoto
+    ? toKey(input.existingProfilePhoto, base)
+    : "";
+  const existingDetailPhotoKeys = (input.existingDetailPhotos ?? []).map(
+    (urlOrKey) => toKey(urlOrKey, base)
+  );
+
+  const profilePhotoKey =
+    input.newProfilePhotoKey ?? existingProfilePhotoKey ?? prev?.profilePhotoKey ?? "";
+  const detailPhotoKeys = [
+    ...existingDetailPhotoKeys,
+    ...(input.newDetailPhotoKeys ?? []),
+  ];
 
   const actor: ActorProfile = {
     id,
@@ -82,8 +96,10 @@ export async function upsertActor(input: UpsertActorInput) {
     hobbies: input.hobbies,
     filmography: input.filmography,
     youtubeUrl: input.youtubeUrl || "",
-    photoKeys,
-    photos: photoKeys.map((key) => getPhotoUrl(key) || key),
+    profilePhotoKey,
+    profilePhoto: getPhotoUrl(profilePhotoKey) || profilePhotoKey,
+    detailPhotoKeys,
+    detailPhotos: detailPhotoKeys.map((key) => getPhotoUrl(key) || key),
     createdAt: prev?.createdAt ?? now,
     updatedAt: now,
   };
@@ -96,8 +112,14 @@ export async function upsertActor(input: UpsertActorInput) {
   }
 
   if (prev) {
-    const photosToKeep = new Set(actor.photoKeys);
-    const stalePhotos = prev.photoKeys.filter((key) => !photosToKeep.has(key));
+    const photosToKeep = new Set([
+      actor.profilePhotoKey,
+      ...actor.detailPhotoKeys,
+    ]);
+    const stalePhotos = [
+      prev.profilePhotoKey,
+      ...prev.detailPhotoKeys,
+    ].filter((key) => key && !photosToKeep.has(key));
     await Promise.all(stalePhotos.map((key) => removeObject(key)));
   }
 
@@ -108,7 +130,8 @@ export async function deleteActor(id: string) {
   const actor = await getActorById(id);
   if (!actor) return false;
 
-  await Promise.all(actor.photoKeys.map((key) => removeObject(key)));
+  const photoKeys = [actor.profilePhotoKey, ...actor.detailPhotoKeys].filter(Boolean);
+  await Promise.all(photoKeys.map((key) => removeObject(key)));
   await removeObject(actorKey(id));
 
   const index = await getIndex();
@@ -118,15 +141,39 @@ export async function deleteActor(id: string) {
 }
 
 function normalizeActor(actor: ActorProfile): ActorProfile {
-  if (actor.photoKeys?.length) {
+  const hasNewFormat =
+    typeof actor.profilePhotoKey === "string" &&
+    Array.isArray(actor.detailPhotoKeys) &&
+    typeof actor.profilePhoto === "string" &&
+    Array.isArray(actor.detailPhotos);
+  if (hasNewFormat) {
     return actor;
   }
-  const base = process.env.CLOUDFLARE_R2_PUBLIC_BASE_URL?.replace(/\/$/, "");
-  const photoKeys = actor.photos.map((urlOrKey) => {
-    if (base && urlOrKey.startsWith(base)) {
-      return urlOrKey.replace(`${base}/`, "");
-    }
-    return urlOrKey;
-  });
-  return { ...actor, photoKeys };
+
+  const legacyPhotoKeys = (
+    Array.isArray((actor as { photoKeys?: string[] }).photoKeys)
+      ? ((actor as { photoKeys?: string[] }).photoKeys ?? [])
+      : Array.isArray((actor as { photos?: string[] }).photos)
+        ? ((actor as { photos?: string[] }).photos ?? [])
+        : []
+  ).map((v) =>
+    toKey(v, process.env.CLOUDFLARE_R2_PUBLIC_BASE_URL?.replace(/\/$/, ""))
+  );
+
+  const [profilePhotoKey = "", ...detailPhotoKeys] = legacyPhotoKeys;
+  return {
+    ...actor,
+    profilePhotoKey,
+    profilePhoto: getPhotoUrl(profilePhotoKey) || profilePhotoKey,
+    detailPhotoKeys,
+    detailPhotos: detailPhotoKeys.map((key) => getPhotoUrl(key) || key),
+  };
+}
+
+function toKey(urlOrKey: string, base?: string) {
+  if (!urlOrKey) return "";
+  if (base && urlOrKey.startsWith(base)) {
+    return urlOrKey.replace(`${base}/`, "");
+  }
+  return urlOrKey;
 }

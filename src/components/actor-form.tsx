@@ -17,8 +17,14 @@ export function ActorForm({ initial, onSaved }: Props) {
   const [hobbies, setHobbies] = useState(initial?.hobbies ?? "");
   const [filmography, setFilmography] = useState(initial?.filmography ?? "");
   const [youtubeUrl, setYoutubeUrl] = useState(initial?.youtubeUrl ?? "");
-  const [existingPhotos, setExistingPhotos] = useState(initial?.photos ?? []);
-  const [files, setFiles] = useState<File[]>([]);
+  const [existingProfilePhoto, setExistingProfilePhoto] = useState(
+    initial?.profilePhoto ?? ""
+  );
+  const [existingDetailPhotos, setExistingDetailPhotos] = useState(
+    initial?.detailPhotos ?? []
+  );
+  const [profileFile, setProfileFile] = useState<File | null>(null);
+  const [detailFiles, setDetailFiles] = useState<File[]>([]);
   const [loading, setLoading] = useState(false);
 
   const title = useMemo(
@@ -30,48 +36,68 @@ export function ActorForm({ initial, onSaved }: Props) {
     e.preventDefault();
     setLoading(true);
     const isEdit = !!initial?.id;
-    let newPhotoKeys: string[] = [];
-    let actorIdFromUpload: string | undefined;
+    if (!isEdit && !existingProfilePhoto && !profileFile) {
+      alert("대표 프로필 사진을 1장 등록해주세요.");
+      setLoading(false);
+      return;
+    }
 
-    if (files.length > 0) {
+    let actorId = initial?.id;
+    let newProfilePhotoKey: string | undefined;
+    const newDetailPhotoKeys: string[] = [];
+
+    async function uploadFiles(files: File[]) {
       const presignRes = await fetch("/api/uploads/presign", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({
-          actorId: initial?.id,
+          actorId,
           files: files.map((file) => ({ name: file.name, type: file.type })),
         }),
       });
-      if (!presignRes.ok) {
-        alert("사진 업로드 준비에 실패했습니다.");
-        setLoading(false);
-        return;
-      }
+      if (!presignRes.ok) return null;
       const presignData = (await presignRes.json()) as {
         actorId: string;
         uploads: { key: string; uploadUrl: string }[];
       };
-      actorIdFromUpload = presignData.actorId;
+      actorId = presignData.actorId;
 
       for (let i = 0; i < files.length; i += 1) {
-        const file = files[i];
-        const upload = presignData.uploads[i];
-        const uploadRes = await fetch(upload.uploadUrl, {
+        const uploadRes = await fetch(presignData.uploads[i].uploadUrl, {
           method: "PUT",
-          headers: { "Content-Type": file.type || "application/octet-stream" },
-          body: file,
+          headers: {
+            "Content-Type": files[i].type || "application/octet-stream",
+          },
+          body: files[i],
         });
-        if (!uploadRes.ok) {
-          alert("사진 업로드에 실패했습니다.");
-          setLoading(false);
-          return;
-        }
+        if (!uploadRes.ok) return null;
       }
-      newPhotoKeys = presignData.uploads.map((v) => v.key);
+
+      return presignData.uploads.map((upload) => upload.key);
+    }
+
+    if (profileFile) {
+      const uploaded = await uploadFiles([profileFile]);
+      if (!uploaded || uploaded.length === 0) {
+        alert("대표 사진 업로드에 실패했습니다.");
+        setLoading(false);
+        return;
+      }
+      newProfilePhotoKey = uploaded[0];
+    }
+
+    if (detailFiles.length > 0) {
+      const uploaded = await uploadFiles(detailFiles);
+      if (!uploaded) {
+        alert("상세 사진 업로드에 실패했습니다.");
+        setLoading(false);
+        return;
+      }
+      newDetailPhotoKeys.push(...uploaded);
     }
 
     const payload = {
-      id: isEdit ? initial?.id : actorIdFromUpload,
+      id: actorId,
       name,
       birthDate,
       heightCm,
@@ -80,8 +106,10 @@ export function ActorForm({ initial, onSaved }: Props) {
       hobbies,
       filmography,
       youtubeUrl,
-      existingPhotos,
-      newPhotoKeys,
+      existingProfilePhoto,
+      existingDetailPhotos,
+      newProfilePhotoKey,
+      newDetailPhotoKeys,
     };
 
     const url = isEdit ? `/api/actors/${initial.id}` : "/api/actors";
@@ -108,8 +136,10 @@ export function ActorForm({ initial, onSaved }: Props) {
       setHobbies("");
       setFilmography("");
       setYoutubeUrl("");
-      setExistingPhotos([]);
-      setFiles([]);
+      setExistingProfilePhoto("");
+      setExistingDetailPhotos([]);
+      setProfileFile(null);
+      setDetailFiles([]);
     }
     onSaved?.();
   }
@@ -182,20 +212,49 @@ export function ActorForm({ initial, onSaved }: Props) {
       />
 
       <div className="space-y-2">
-        <label className="block text-sm font-medium">기존 사진</label>
+        <label className="block text-sm font-medium">대표 프로필 사진</label>
+        {existingProfilePhoto ? (
+          <div className="relative inline-block">
+            {/* eslint-disable-next-line @next/next/no-img-element */}
+            <img
+              src={existingProfilePhoto}
+              alt="대표 사진"
+              className="h-24 w-24 rounded object-cover"
+            />
+            <button
+              type="button"
+              onClick={() => setExistingProfilePhoto("")}
+              className="absolute -right-2 -top-2 rounded-full bg-red-600 px-2 py-1 text-xs text-white"
+            >
+              X
+            </button>
+          </div>
+        ) : (
+          <p className="text-sm text-zinc-500">등록된 대표 사진이 없습니다.</p>
+        )}
+      </div>
+
+      <input
+        type="file"
+        accept="image/*"
+        onChange={(e) => setProfileFile(e.target.files?.[0] ?? null)}
+      />
+
+      <div className="space-y-2">
+        <label className="block text-sm font-medium">상세 추가 사진</label>
         <div className="flex flex-wrap gap-2">
-          {existingPhotos.map((photo) => (
+          {existingDetailPhotos.map((photo) => (
             <div key={photo} className="relative">
               {/* eslint-disable-next-line @next/next/no-img-element */}
               <img
                 src={photo}
-                alt="기존 사진"
+                alt="상세 사진"
                 className="h-20 w-20 rounded object-cover"
               />
               <button
                 type="button"
                 onClick={() =>
-                  setExistingPhotos((prev) => prev.filter((p) => p !== photo))
+                  setExistingDetailPhotos((prev) => prev.filter((p) => p !== photo))
                 }
                 className="absolute -right-2 -top-2 rounded-full bg-red-600 px-2 py-1 text-xs text-white"
               >
@@ -210,7 +269,7 @@ export function ActorForm({ initial, onSaved }: Props) {
         type="file"
         multiple
         accept="image/*"
-        onChange={(e) => setFiles(Array.from(e.target.files ?? []))}
+        onChange={(e) => setDetailFiles(Array.from(e.target.files ?? []))}
       />
 
       <button
