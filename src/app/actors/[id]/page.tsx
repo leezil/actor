@@ -1,6 +1,7 @@
 import Link from "next/link";
 import { notFound } from "next/navigation";
 import { getActorById } from "@/lib/actors";
+import { DetailPhotoCarousel } from "@/components/detail-photo-carousel";
 
 export const dynamic = "force-dynamic";
 
@@ -32,7 +33,7 @@ export default async function ActorDetailPage({
           <img
             src={actor.profilePhoto}
             alt={`${actor.name} 대표 사진`}
-            className="h-96 w-full rounded-lg object-cover"
+            className="mx-auto h-[520px] w-full max-w-[390px] rounded-lg object-cover"
           />
         ) : (
           <div className="rounded-lg border border-dashed border-zinc-300 p-8 text-center text-zinc-500">
@@ -43,22 +44,7 @@ export default async function ActorDetailPage({
 
       <section className="space-y-2">
         <h2 className="text-xl font-semibold">상세 사진</h2>
-        <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-3">
-          {actor.detailPhotos.map((photo) => (
-            // eslint-disable-next-line @next/next/no-img-element
-            <img
-              key={photo}
-              src={photo}
-              alt={`${actor.name} 상세 사진`}
-              className="h-72 w-full rounded-lg object-cover"
-            />
-          ))}
-          {actor.detailPhotos.length === 0 && (
-            <div className="rounded-lg border border-dashed border-zinc-300 p-6 text-center text-zinc-500">
-              등록된 상세 사진이 없습니다.
-            </div>
-          )}
-        </div>
+        <DetailPhotoCarousel actorName={actor.name} photos={actor.detailPhotos} />
       </section>
 
       <section className="rounded-xl border border-zinc-200 bg-white p-5">
