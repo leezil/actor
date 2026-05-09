@@ -10,8 +10,6 @@ type Props = {
 
 export function ProfileRowSlider({ actors }: Props) {
   const scrollerRef = useRef<HTMLDivElement | null>(null);
-  const movedRef = useRef(false);
-  const suppressClickRef = useRef(false);
   const [isDragging, setIsDragging] = useState(false);
   const [dragStartX, setDragStartX] = useState(0);
   const [dragStartScrollLeft, setDragStartScrollLeft] = useState(0);
@@ -19,7 +17,6 @@ export function ProfileRowSlider({ actors }: Props) {
   function startDrag(clientX: number) {
     const scroller = scrollerRef.current;
     if (!scroller) return;
-    movedRef.current = false;
     setIsDragging(true);
     setDragStartX(clientX);
     setDragStartScrollLeft(scroller.scrollLeft);
@@ -30,21 +27,11 @@ export function ProfileRowSlider({ actors }: Props) {
     const scroller = scrollerRef.current;
     if (!scroller) return;
     const delta = clientX - dragStartX;
-    if (Math.abs(delta) > 6) {
-      movedRef.current = true;
-    }
     scroller.scrollLeft = dragStartScrollLeft - delta;
   }
 
   function endDrag() {
-    if (movedRef.current) {
-      suppressClickRef.current = true;
-      setTimeout(() => {
-        suppressClickRef.current = false;
-      }, 80);
-    }
     setIsDragging(false);
-    movedRef.current = false;
   }
 
   function blockNativeDrag(e: React.DragEvent<HTMLElement>) {
@@ -67,19 +54,14 @@ export function ProfileRowSlider({ actors }: Props) {
       onPointerCancel={endDrag}
       onPointerLeave={endDrag}
     >
-      <section className="flex min-w-max gap-4 pb-1">
+      <section className="grid min-w-max grid-flow-col grid-rows-2 auto-cols-[13rem] gap-4 pb-1">
         {actors.map((actor) => (
           <Link
             key={actor.id}
             href={`/actors/${actor.id}`}
-            className="w-52 flex-shrink-0 overflow-hidden rounded-xl border border-zinc-200 bg-white text-zinc-900"
+            className="w-full overflow-hidden rounded-xl border border-zinc-200 bg-white text-zinc-900"
             draggable={false}
             onDragStart={blockNativeDrag}
-            onClick={(e) => {
-              if (suppressClickRef.current) {
-                e.preventDefault();
-              }
-            }}
           >
             {actor.profilePhoto ? (
               // eslint-disable-next-line @next/next/no-img-element
