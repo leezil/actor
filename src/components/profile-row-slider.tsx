@@ -5,20 +5,31 @@ import { useRef, useState } from "react";
 import { ActorProfile } from "@/types/actor";
 
 const DRAG_CLICK_THRESHOLD_PX = 12;
+const INTENT_SLOP_PX = 10;
 
 type Props = {
   actors: ActorProfile[];
 };
+
+type Intent = "undecided" | "horizontal" | "vertical";
 
 export function ProfileRowSlider({ actors }: Props) {
   const scrollerRef = useRef<HTMLDivElement | null>(null);
   const [isDragging, setIsDragging] = useState(false);
   const dragConsumedRef = useRef(false);
   const startXRef = useRef(0);
+  const startYRef = useRef(0);
   const scrollStartRef = useRef(0);
+  const intentRef = useRef<Intent>("undecided");
 
   function blockNativeDrag(ev: React.DragEvent<HTMLElement>) {
     ev.preventDefault();
+  }
+
+  function teardownWindowListeners(move: (ev: PointerEvent) => void, up: () => void) {
+    window.removeEventListener("pointermove", move);
+    window.removeEventListener("pointerup", up);
+    window.removeEventListener("pointercancel", up);
   }
 
   function onPointerDownCapture(e: React.PointerEvent<HTMLDivElement>) {
@@ -26,23 +37,42 @@ export function ProfileRowSlider({ actors }: Props) {
 
     dragConsumedRef.current = false;
     startXRef.current = e.clientX;
+    startYRef.current = e.clientY;
     scrollStartRef.current = scrollerRef.current.scrollLeft;
-    setIsDragging(true);
+    intentRef.current = "undecided";
+    setIsDragging(false);
 
     function onMove(ev: PointerEvent) {
       const scroller = scrollerRef.current;
       if (!scroller) return;
-      const delta = ev.clientX - startXRef.current;
-      if (Math.abs(delta) > DRAG_CLICK_THRESHOLD_PX) {
+
+      const dx = ev.clientX - startXRef.current;
+      const dy = ev.clientY - startYRef.current;
+
+      if (intentRef.current === "undecided") {
+        if (Math.abs(dx) < INTENT_SLOP_PX && Math.abs(dy) < INTENT_SLOP_PX) return;
+        if (Math.abs(dy) > Math.abs(dx) + 4) {
+          intentRef.current = "vertical";
+          teardownWindowListeners(onMove, onUp);
+          return;
+        }
+        if (Math.abs(dx) >= INTENT_SLOP_PX || Math.abs(dx) >= Math.abs(dy)) {
+          intentRef.current = "horizontal";
+          setIsDragging(true);
+        } else return;
+      }
+
+      if (intentRef.current !== "horizontal") return;
+
+      if (Math.abs(dx) > DRAG_CLICK_THRESHOLD_PX) {
         dragConsumedRef.current = true;
       }
-      scroller.scrollLeft = scrollStartRef.current - delta;
+      scroller.scrollLeft = scrollStartRef.current - dx;
     }
 
     function onUp() {
-      window.removeEventListener("pointermove", onMove);
-      window.removeEventListener("pointerup", onUp);
-      window.removeEventListener("pointercancel", onUp);
+      teardownWindowListeners(onMove, onUp);
+      intentRef.current = "undecided";
       setIsDragging(false);
     }
 
@@ -54,10 +84,11 @@ export function ProfileRowSlider({ actors }: Props) {
   return (
     <div
       ref={scrollerRef}
-      className={`overflow-x-auto overscroll-x-contain [scrollbar-width:none] [&::-webkit-scrollbar]:hidden ${
+      className={`overflow-x-auto overscroll-x-contain [-webkit-overflow-scrolling:touch] [scrollbar-width:none] [&::-webkit-scrollbar]:hidden ${
         isDragging ? "cursor-grabbing select-none" : "cursor-grab"
       }`}
-      style={{ touchAction: "pan-x" }}
+      /** 세로 스크롤 우선 허용: 판별 전에는 브라우저가 세로 제스처를 처리할 수 있게 함 */
+      style={{ touchAction: "pan-x pan-y" }}
       onPointerDownCapture={onPointerDownCapture}
     >
       <section className="grid min-w-max grid-flow-col grid-rows-2 auto-cols-[13rem] gap-4 pb-1">

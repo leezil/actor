@@ -1,6 +1,6 @@
 "use client";
 
-import { useMemo, useRef, useState } from "react";
+import { useMemo, useRef } from "react";
 
 type Props = {
   actorName: string;
@@ -14,9 +14,11 @@ export function DetailPhotoCarousel({ actorName, profilePhoto, photos }: Props) 
   const lastMoveTimeRef = useRef(0);
   const lastMoveXRef = useRef(0);
   const momentumFrameRef = useRef<number | null>(null);
-  const [isDragging, setIsDragging] = useState(false);
-  const [dragStartX, setDragStartX] = useState(0);
-  const [dragStartScrollLeft, setDragStartScrollLeft] = useState(0);
+  /** setState 미반영 때문에 첫 터치 move가 무시되는 것을 방지 */
+  const draggingRef = useRef(false);
+  const dragStartXRef = useRef(0);
+  const dragStartScrollLeftRef = useRef(0);
+
   const visibleCount = 2;
   const renderedPhotos = useMemo(() => {
     if (photos.length >= visibleCount) return photos;
@@ -24,42 +26,43 @@ export function DetailPhotoCarousel({ actorName, profilePhoto, photos }: Props) 
     return ["__placeholder__", "__placeholder__2"];
   }, [photos]);
 
-  function handlePointerDown(clientX: number) {
-    const scroller = scrollerRef.current;
-    if (!scroller) return;
+  function cancelMomentum() {
     if (momentumFrameRef.current) {
       cancelAnimationFrame(momentumFrameRef.current);
       momentumFrameRef.current = null;
     }
-    setIsDragging(true);
-    setDragStartX(clientX);
-    setDragStartScrollLeft(scroller.scrollLeft);
+  }
+
+  function handlePointerDown(clientX: number) {
+    const scroller = scrollerRef.current;
+    if (!scroller) return;
+    cancelMomentum();
+    draggingRef.current = true;
+    dragStartXRef.current = clientX;
+    dragStartScrollLeftRef.current = scroller.scrollLeft;
     velocityRef.current = 0;
     lastMoveTimeRef.current = performance.now();
     lastMoveXRef.current = clientX;
   }
 
   function handlePointerMove(clientX: number) {
-    if (!isDragging) return;
+    if (!draggingRef.current || !scrollerRef.current) return;
     const scroller = scrollerRef.current;
-    if (!scroller) return;
-    const delta = clientX - dragStartX;
-    scroller.scrollLeft = dragStartScrollLeft - delta;
+    const delta = clientX - dragStartXRef.current;
+    scroller.scrollLeft = dragStartScrollLeftRef.current - delta;
 
     const now = performance.now();
     const dt = now - lastMoveTimeRef.current;
     if (dt > 0) {
-      const dx = clientX - lastMoveXRef.current;
-      velocityRef.current = dx / dt;
+      velocityRef.current = (clientX - lastMoveXRef.current) / dt;
       lastMoveTimeRef.current = now;
       lastMoveXRef.current = clientX;
     }
   }
 
   function handlePointerUp() {
-    const scroller = scrollerRef.current;
-    if (!scroller) return;
-    setIsDragging(false);
+    if (!scrollerRef.current) return;
+    draggingRef.current = false;
     let velocity = velocityRef.current;
     const decay = 0.95;
     const minVelocity = 0.02;
@@ -110,16 +113,21 @@ export function DetailPhotoCarousel({ actorName, profilePhoto, photos }: Props) 
         <div className="relative overflow-hidden rounded-xl bg-[var(--background)] lg:col-span-2">
           <div
             ref={scrollerRef}
-            className={`overflow-x-auto [scrollbar-width:none] [&::-webkit-scrollbar]:hidden ${
-              isDragging ? "cursor-grabbing" : "cursor-grab"
-            }`}
-            style={{ touchAction: "pan-y" }}
+            className="cursor-grab overflow-x-auto overscroll-x-contain [-webkit-overflow-scrolling:touch] active:cursor-grabbing [scrollbar-width:none] [&::-webkit-scrollbar]:hidden"
+            /** 가로 패닝 + pinch (모바일). pan-y였을 때 세로만 허용돼 스크롤이 끊김 */
+            style={{ touchAction: "pan-x pinch-zoom" }}
             onMouseDown={(e) => handlePointerDown(e.clientX)}
             onMouseMove={(e) => handlePointerMove(e.clientX)}
             onMouseUp={handlePointerUp}
             onMouseLeave={handlePointerUp}
-            onTouchStart={(e) => handlePointerDown(e.touches[0].clientX)}
-            onTouchMove={(e) => handlePointerMove(e.touches[0].clientX)}
+            onTouchStart={(e) => {
+              const t = e.touches[0];
+              if (t) handlePointerDown(t.clientX);
+            }}
+            onTouchMove={(e) => {
+              const t = e.touches[0];
+              if (t) handlePointerMove(t.clientX);
+            }}
             onTouchEnd={handlePointerUp}
             onTouchCancel={handlePointerUp}
           >
