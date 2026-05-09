@@ -29,25 +29,68 @@ export function ActorForm({ initial, onSaved }: Props) {
   async function handleSubmit(e: React.FormEvent<HTMLFormElement>) {
     e.preventDefault();
     setLoading(true);
-    const formData = new FormData();
-    formData.set("name", name);
-    formData.set("birthDate", birthDate);
-    formData.set("heightCm", heightCm);
-    formData.set("weightKg", weightKg);
-    formData.set("specialties", specialties);
-    formData.set("hobbies", hobbies);
-    formData.set("filmography", filmography);
-    formData.set("youtubeUrl", youtubeUrl);
-    formData.set("existingPhotos", JSON.stringify(existingPhotos));
-    for (const file of files) {
-      formData.append("photos", file);
+    const isEdit = !!initial?.id;
+    let newPhotoKeys: string[] = [];
+    let actorIdFromUpload: string | undefined;
+
+    if (files.length > 0) {
+      const presignRes = await fetch("/api/uploads/presign", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          actorId: initial?.id,
+          files: files.map((file) => ({ name: file.name, type: file.type })),
+        }),
+      });
+      if (!presignRes.ok) {
+        alert("사진 업로드 준비에 실패했습니다.");
+        setLoading(false);
+        return;
+      }
+      const presignData = (await presignRes.json()) as {
+        actorId: string;
+        uploads: { key: string; uploadUrl: string }[];
+      };
+      actorIdFromUpload = presignData.actorId;
+
+      for (let i = 0; i < files.length; i += 1) {
+        const file = files[i];
+        const upload = presignData.uploads[i];
+        const uploadRes = await fetch(upload.uploadUrl, {
+          method: "PUT",
+          headers: { "Content-Type": file.type || "application/octet-stream" },
+          body: file,
+        });
+        if (!uploadRes.ok) {
+          alert("사진 업로드에 실패했습니다.");
+          setLoading(false);
+          return;
+        }
+      }
+      newPhotoKeys = presignData.uploads.map((v) => v.key);
     }
 
-    const isEdit = !!initial?.id;
+    const payload = {
+      id: isEdit ? initial?.id : actorIdFromUpload,
+      name,
+      birthDate,
+      heightCm,
+      weightKg,
+      specialties,
+      hobbies,
+      filmography,
+      youtubeUrl,
+      existingPhotos,
+      newPhotoKeys,
+    };
+
     const url = isEdit ? `/api/actors/${initial.id}` : "/api/actors";
     const method = isEdit ? "PUT" : "POST";
-
-    const res = await fetch(url, { method, body: formData });
+    const res = await fetch(url, {
+      method,
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify(payload),
+    });
     if (!res.ok) {
       alert("저장에 실패했습니다.");
       setLoading(false);

@@ -3,7 +3,7 @@ import { deleteActor, getActorById, upsertActor } from "@/lib/actors";
 
 export const runtime = "nodejs";
 
-function parseNumber(value: FormDataEntryValue | null) {
+function parseNumberFromUnknown(value: unknown) {
   if (!value) return 0;
   const parsed = Number(value);
   return Number.isFinite(parsed) ? parsed : 0;
@@ -26,25 +26,25 @@ export async function PUT(
   { params }: { params: Promise<{ id: string }> }
 ) {
   const { id } = await params;
-  const form = await req.formData();
-  const photos = form
-    .getAll("photos")
-    .filter((v): v is File => v instanceof File && v.size > 0);
-  const existingPhotosRaw = String(form.get("existingPhotos") ?? "[]");
-  const existingPhotos = JSON.parse(existingPhotosRaw) as string[];
+  const body = await req.json();
+  const existingPhotos = Array.isArray(body.existingPhotos)
+    ? (body.existingPhotos as string[])
+    : [];
 
   const actor = await upsertActor({
     id,
-    name: String(form.get("name") ?? ""),
-    birthDate: String(form.get("birthDate") ?? ""),
-    heightCm: parseNumber(form.get("heightCm")),
-    weightKg: parseNumber(form.get("weightKg")),
-    specialties: String(form.get("specialties") ?? ""),
-    hobbies: String(form.get("hobbies") ?? ""),
-    filmography: String(form.get("filmography") ?? ""),
-    youtubeUrl: String(form.get("youtubeUrl") ?? ""),
+    name: String(body.name ?? ""),
+    birthDate: String(body.birthDate ?? ""),
+    heightCm: parseNumberFromUnknown(body.heightCm),
+    weightKg: parseNumberFromUnknown(body.weightKg),
+    specialties: String(body.specialties ?? ""),
+    hobbies: String(body.hobbies ?? ""),
+    filmography: String(body.filmography ?? ""),
+    youtubeUrl: String(body.youtubeUrl ?? ""),
     existingPhotos,
-    newPhotos: photos,
+    newPhotoKeys: Array.isArray(body.newPhotoKeys)
+      ? (body.newPhotoKeys as string[])
+      : [],
   });
 
   return NextResponse.json(actor);

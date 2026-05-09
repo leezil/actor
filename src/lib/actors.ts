@@ -1,6 +1,6 @@
 import { randomUUID } from "node:crypto";
 import { ActorProfile } from "@/types/actor";
-import { readJson, removeObject, uploadBytes, uploadJson } from "@/lib/r2";
+import { readJson, removeObject, uploadJson } from "@/lib/r2";
 
 const INDEX_KEY = "actors/index.json";
 
@@ -21,7 +21,7 @@ function actorKey(id: string) {
   return `actors/${id}.json`;
 }
 
-function photoKey(id: string, fileName: string) {
+export function photoKey(id: string, fileName: string) {
   return `actors/${id}/photos/${fileName}`;
 }
 
@@ -55,24 +55,13 @@ type UpsertActorInput = Omit<
 > & {
   id?: string;
   existingPhotos?: string[];
-  newPhotos?: File[];
+  newPhotoKeys?: string[];
 };
 
 export async function upsertActor(input: UpsertActorInput) {
   const id = input.id ?? randomUUID();
   const now = new Date().toISOString();
   const prev = input.id ? await getActorById(input.id) : null;
-
-  const uploadedPhotoKeys: string[] = [];
-  if (input.newPhotos) {
-    for (const photo of input.newPhotos) {
-      const ext = photo.name.split(".").pop() ?? "jpg";
-      const key = photoKey(id, `${randomUUID()}.${ext}`);
-      const bytes = Buffer.from(await photo.arrayBuffer());
-      await uploadBytes(key, bytes, photo.type || "image/jpeg");
-      uploadedPhotoKeys.push(key);
-    }
-  }
 
   const base = process.env.CLOUDFLARE_R2_PUBLIC_BASE_URL?.replace(/\/$/, "");
   const existingPhotoKeys = (input.existingPhotos ?? []).map((urlOrKey) => {
@@ -81,7 +70,7 @@ export async function upsertActor(input: UpsertActorInput) {
     }
     return urlOrKey;
   });
-  const photoKeys = [...existingPhotoKeys, ...uploadedPhotoKeys];
+  const photoKeys = [...existingPhotoKeys, ...(input.newPhotoKeys ?? [])];
 
   const actor: ActorProfile = {
     id,

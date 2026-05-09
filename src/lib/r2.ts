@@ -4,6 +4,7 @@ import {
   PutObjectCommand,
   S3Client,
 } from "@aws-sdk/client-s3";
+import { getSignedUrl } from "@aws-sdk/s3-request-presigner";
 
 function getEnv() {
   const accountId = process.env.CLOUDFLARE_ACCOUNT_ID;
@@ -30,6 +31,24 @@ function createClient() {
       secretAccessKey,
     },
   });
+}
+
+export async function createUploadSignedUrl(
+  key: string,
+  contentType: string,
+  expiresInSeconds = 300
+) {
+  const client = createClient();
+  const { bucketName } = getEnv();
+  return getSignedUrl(
+    client,
+    new PutObjectCommand({
+      Bucket: bucketName,
+      Key: key,
+      ContentType: contentType,
+    }),
+    { expiresIn: expiresInSeconds }
+  );
 }
 
 export async function uploadJson(key: string, value: unknown) {
