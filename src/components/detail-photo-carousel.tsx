@@ -10,6 +10,10 @@ type Props = {
 
 export function DetailPhotoCarousel({ actorName, profilePhoto, photos }: Props) {
   const scrollerRef = useRef<HTMLDivElement | null>(null);
+  const velocityRef = useRef(0);
+  const lastMoveTimeRef = useRef(0);
+  const lastMoveXRef = useRef(0);
+  const momentumFrameRef = useRef<number | null>(null);
   const [isDragging, setIsDragging] = useState(false);
   const [dragStartX, setDragStartX] = useState(0);
   const [dragStartScrollLeft, setDragStartScrollLeft] = useState(0);
@@ -23,9 +27,16 @@ export function DetailPhotoCarousel({ actorName, profilePhoto, photos }: Props) 
   function handlePointerDown(clientX: number) {
     const scroller = scrollerRef.current;
     if (!scroller) return;
+    if (momentumFrameRef.current) {
+      cancelAnimationFrame(momentumFrameRef.current);
+      momentumFrameRef.current = null;
+    }
     setIsDragging(true);
     setDragStartX(clientX);
     setDragStartScrollLeft(scroller.scrollLeft);
+    velocityRef.current = 0;
+    lastMoveTimeRef.current = performance.now();
+    lastMoveXRef.current = clientX;
   }
 
   function handlePointerMove(clientX: number) {
@@ -34,10 +45,42 @@ export function DetailPhotoCarousel({ actorName, profilePhoto, photos }: Props) 
     if (!scroller) return;
     const delta = clientX - dragStartX;
     scroller.scrollLeft = dragStartScrollLeft - delta;
+
+    const now = performance.now();
+    const dt = now - lastMoveTimeRef.current;
+    if (dt > 0) {
+      const dx = clientX - lastMoveXRef.current;
+      velocityRef.current = dx / dt;
+      lastMoveTimeRef.current = now;
+      lastMoveXRef.current = clientX;
+    }
   }
 
   function handlePointerUp() {
+    const scroller = scrollerRef.current;
+    if (!scroller) return;
     setIsDragging(false);
+    let velocity = velocityRef.current;
+    const decay = 0.95;
+    const minVelocity = 0.02;
+
+    const tick = () => {
+      if (!scrollerRef.current) {
+        momentumFrameRef.current = null;
+        return;
+      }
+      if (Math.abs(velocity) < minVelocity) {
+        momentumFrameRef.current = null;
+        return;
+      }
+      scrollerRef.current.scrollLeft -= velocity * 20;
+      velocity *= decay;
+      momentumFrameRef.current = requestAnimationFrame(tick);
+    };
+
+    if (Math.abs(velocity) >= minVelocity) {
+      momentumFrameRef.current = requestAnimationFrame(tick);
+    }
   }
 
   function blockNativeDrag(e: React.DragEvent<HTMLImageElement>) {
