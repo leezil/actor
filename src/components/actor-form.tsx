@@ -2,6 +2,7 @@
 
 import { useMemo, useState } from "react";
 import { ActorProfile } from "@/types/actor";
+import { optimizeImageForUpload, optimizeImagesForUpload } from "@/lib/optimize-upload-image";
 
 type Props = {
   initial?: ActorProfile | null;
@@ -77,7 +78,8 @@ export function ActorForm({ initial, onSaved }: Props) {
     }
 
     if (profileFile) {
-      const uploaded = await uploadFiles([profileFile]);
+      const profileOptimized = await optimizeImageForUpload(profileFile);
+      const uploaded = await uploadFiles([profileOptimized]);
       if (!uploaded || uploaded.length === 0) {
         alert("대표 사진 업로드에 실패했습니다.");
         setLoading(false);
@@ -87,7 +89,8 @@ export function ActorForm({ initial, onSaved }: Props) {
     }
 
     if (detailFiles.length > 0) {
-      const uploaded = await uploadFiles(detailFiles);
+      const detailOptimized = await optimizeImagesForUpload(detailFiles);
+      const uploaded = await uploadFiles(detailOptimized);
       if (!uploaded) {
         alert("추가 사진 업로드에 실패했습니다.");
         setLoading(false);
@@ -240,6 +243,9 @@ export function ActorForm({ initial, onSaved }: Props) {
         accept="image/*"
         onChange={(e) => setProfileFile(e.target.files?.[0] ?? null)}
       />
+      <p className="text-xs text-zinc-500">
+        용량이 클 때만 고화질 우선 순으로 JPEG 변환합니다. 약 340KB 미만·GIF/SVG는 그대로입니다.
+      </p>
 
       <div className="space-y-2">
         <label className="block text-sm font-medium">추가 사진</label>
@@ -274,7 +280,7 @@ export function ActorForm({ initial, onSaved }: Props) {
         onChange={(e) => setDetailFiles(Array.from(e.target.files ?? []))}
       />
       <p className="text-xs text-zinc-500">
-        추가 사진은 여러 장을 한 번에 선택해서 업로드할 수 있습니다.
+        추가 사진도 대표와 동일 규칙이며, 흐릿하게 보이지 않게 품질·해상도는 보수적으로만 줄입니다.
       </p>
 
       <button

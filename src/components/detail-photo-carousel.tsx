@@ -14,10 +14,11 @@ export function DetailPhotoCarousel({ actorName, profilePhoto, photos }: Props) 
   const lastMoveTimeRef = useRef(0);
   const lastMoveXRef = useRef(0);
   const momentumFrameRef = useRef<number | null>(null);
-  /** setState 미반영 때문에 첫 터치 move가 무시되는 것을 방지 */
   const draggingRef = useRef(false);
   const dragStartXRef = useRef(0);
   const dragStartScrollLeftRef = useRef(0);
+  const dragRafRef = useRef<number | null>(null);
+  const latestPointerXRef = useRef(0);
 
   const visibleCount = 2;
   const renderedPhotos = useMemo(() => {
@@ -33,21 +34,16 @@ export function DetailPhotoCarousel({ actorName, profilePhoto, photos }: Props) 
     }
   }
 
-  function handlePointerDown(clientX: number) {
-    const scroller = scrollerRef.current;
-    if (!scroller) return;
-    cancelMomentum();
-    draggingRef.current = true;
-    dragStartXRef.current = clientX;
-    dragStartScrollLeftRef.current = scroller.scrollLeft;
-    velocityRef.current = 0;
-    lastMoveTimeRef.current = performance.now();
-    lastMoveXRef.current = clientX;
+  function cancelDragRaf() {
+    if (dragRafRef.current !== null) {
+      cancelAnimationFrame(dragRafRef.current);
+      dragRafRef.current = null;
+    }
   }
 
-  function handlePointerMove(clientX: number) {
-    if (!draggingRef.current || !scrollerRef.current) return;
+  function applyDragScroll(clientX: number) {
     const scroller = scrollerRef.current;
+    if (!scroller || !draggingRef.current) return;
     const delta = clientX - dragStartXRef.current;
     scroller.scrollLeft = dragStartScrollLeftRef.current - delta;
 
@@ -60,9 +56,21 @@ export function DetailPhotoCarousel({ actorName, profilePhoto, photos }: Props) 
     }
   }
 
-  function handlePointerUp() {
-    if (!scrollerRef.current) return;
+  function scheduleDragScroll(clientX: number) {
+    latestPointerXRef.current = clientX;
+    if (dragRafRef.current !== null) return;
+    dragRafRef.current = requestAnimationFrame(() => {
+      dragRafRef.current = null;
+      applyDragScroll(latestPointerXRef.current);
+    });
+  }
+
+  function endDragAndMomentum(clientX?: number) {
+    cancelDragRaf();
+    const x = clientX ?? latestPointerXRef.current;
+    applyDragScroll(x);
     draggingRef.current = false;
+
     let velocity = velocityRef.current;
     const decay = 0.95;
     const minVelocity = 0.02;
@@ -86,8 +94,50 @@ export function DetailPhotoCarousel({ actorName, profilePhoto, photos }: Props) 
     }
   }
 
-  function blockNativeDrag(e: React.DragEvent<HTMLImageElement>) {
-    e.preventDefault();
+  function onScrollerPointerDown(e: React.PointerEvent<HTMLDivElement>) {
+    if (e.pointerType === "mouse" && e.button !== 0) return;
+    const scroller = scrollerRef.current;
+    if (!scroller || !scroller.contains(e.target as Node)) return;
+
+    cancelMomentum();
+    cancelDragRaf();
+    draggingRef.current = true;
+    dragStartXRef.current = e.clientX;
+    latestPointerXRef.current = e.clientX;
+    dragStartScrollLeftRef.current = scroller.scrollLeft;
+    velocityRef.current = 0;
+    lastMoveTimeRef.current = performance.now();
+    lastMoveXRef.current = e.clientX;
+
+    try {
+      (e.currentTarget as HTMLElement).setPointerCapture(e.pointerId);
+    } catch {
+      /* ignore */
+    }
+  }
+
+  function onScrollerPointerMove(e: React.PointerEvent<HTMLDivElement>) {
+    if (!draggingRef.current) return;
+    scheduleDragScroll(e.clientX);
+  }
+
+  function onScrollerPointerUp(e: React.PointerEvent<HTMLDivElement>) {
+    try {
+      (e.currentTarget as HTMLElement).releasePointerCapture(e.pointerId);
+    } catch {
+      /* ignore */
+    }
+    if (!draggingRef.current) return;
+    endDragAndMomentum(e.clientX);
+  }
+
+  function onScrollerLostPointerCapture() {
+    if (!draggingRef.current) return;
+    endDragAndMomentum();
+  }
+
+  function blockNativeDrag(ev: React.DragEvent<HTMLImageElement>) {
+    ev.preventDefault();
   }
 
   return (
@@ -113,23 +163,13 @@ export function DetailPhotoCarousel({ actorName, profilePhoto, photos }: Props) 
         <div className="relative overflow-hidden rounded-xl bg-[var(--background)] lg:col-span-2">
           <div
             ref={scrollerRef}
-            className="cursor-grab overflow-x-auto overscroll-x-contain [-webkit-overflow-scrolling:touch] active:cursor-grabbing [scrollbar-width:none] [&::-webkit-scrollbar]:hidden"
-            /** 가로 패닝 + pinch (모바일). pan-y였을 때 세로만 허용돼 스크롤이 끊김 */
+            className="cursor-grab select-none overflow-x-auto overscroll-x-contain [-webkit-overflow-scrolling:touch] active:cursor-grabbing [scrollbar-width:none] [&::-webkit-scrollbar]:hidden"
             style={{ touchAction: "pan-x pinch-zoom" }}
-            onMouseDown={(e) => handlePointerDown(e.clientX)}
-            onMouseMove={(e) => handlePointerMove(e.clientX)}
-            onMouseUp={handlePointerUp}
-            onMouseLeave={handlePointerUp}
-            onTouchStart={(e) => {
-              const t = e.touches[0];
-              if (t) handlePointerDown(t.clientX);
-            }}
-            onTouchMove={(e) => {
-              const t = e.touches[0];
-              if (t) handlePointerMove(t.clientX);
-            }}
-            onTouchEnd={handlePointerUp}
-            onTouchCancel={handlePointerUp}
+            onPointerDown={onScrollerPointerDown}
+            onPointerMove={onScrollerPointerMove}
+            onPointerUp={onScrollerPointerUp}
+            onPointerCancel={onScrollerPointerUp}
+            onLostPointerCapture={onScrollerLostPointerCapture}
           >
             <div className="flex gap-3 p-2">
               {renderedPhotos.map((photo, photoIndex) => (
